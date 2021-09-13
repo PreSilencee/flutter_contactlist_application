@@ -1,16 +1,12 @@
 # flutter_contactlist_application
 
-A new Flutter project.
+# Feature/Function/Task
+-[] sorted contact list based on time (eg. most recent to oldest)
+-[] display half of data
+-[] pulling up to the list to show remaining data
+-[] pull-to-refresh to generate 5 random data and add in to list
+-[] show the indicator that inform user that "You have reached end of the list"
+-[] change between the original time format and format "time ago" with a toggle button and keep the changes even if users kill the app.
+-[] share the contact information to other installed applications
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
