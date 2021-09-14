@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1016414231379",
+    "project_id": "flutter-contact-list-73b8b",
+    "storage_bucket": "flutter-contact-list-73b8b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1016414231379:android:7019822f9f0eb6a84a1fa6",
+        "android_client_info": {
+          "package_name": "com.example.flutter_contactlist_application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1016414231379-72rmb083rip9p5dc3lkkvc699n4u4dii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUH7undD7A0wZWGbhpQKbZuK-jRcH9NrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1016414231379-72rmb083rip9p5dc3lkkvc699n4u4dii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
