@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contactlist_application/components/MyDialog.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -19,8 +20,7 @@ String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
     length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
 
 //register page state
-class RegisterPageState extends State<RegisterPage>
-    with TickerProviderStateMixin {
+class RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   late BuildContext dialogContext;
   //initialize the auth service
@@ -31,57 +31,10 @@ class RegisterPageState extends State<RegisterPage>
   TextEditingController emailController = new TextEditingController();
   TextEditingController passwordController = new TextEditingController();
   TextEditingController confPasswordController = new TextEditingController();
-  bool visible = false;
-
-  late AnimationController _animationController;
-
-  @override
-  void dispose() {
-    super.dispose();
-    _animationController.dispose();
-  }
-
-  @override
-  void initState() {
-    _animationController =
-        AnimationController(duration: new Duration(seconds: 2), vsync: this);
-    _animationController.repeat();
-    super.initState();
-  }
-
-  _loadingIndicator() {
-    return CircularProgressIndicator(
-        valueColor: _animationController
-            .drive(ColorTween(begin: Colors.yellow, end: Colors.blue)));
-  }
-
-  _loadingMessage() {
-    return Text('Registering... Please wait awhile',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold));
-  }
 
   Future sendData() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        dialogContext = context;
-        return Dialog(
-          child: Container(
-              width: double.infinity,
-              height: 100,
-              decoration:
-                  BoxDecoration(borderRadius: BorderRadius.circular(20.0)),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _loadingIndicator(),
-                    SizedBox(width: 20),
-                    _loadingMessage()
-                  ])),
-        );
-      },
-    );
+    MyDialog dialog = new MyDialog();
+    dialog.waiting(context, 'Registering... Please wait awhile');
 
     // Getting value from Controller
     String email = emailController.text;
@@ -90,23 +43,8 @@ class RegisterPageState extends State<RegisterPage>
     dynamic result = await _auth.registerWithEmailandPassword(email, password);
 
     if (result == null) {
-      Navigator.pop(dialogContext);
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: new Text("Register Failed. Please Try Again later."),
-            actions: <Widget>[
-              TextButton(
-                child: new Text("OK"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
+      Navigator.pop(dialog.getDialogContext());
+      dialog.confirmation(context, 'Register Failed. Please Try Again later.');
     } else {
       // API URL
       var url = 'https://rlcm.000webhostapp.com/registerUser.php';
@@ -125,46 +63,18 @@ class RegisterPageState extends State<RegisterPage>
 
       // If Web call Success than Hide the CircularProgressIndicator.
       if (response.statusCode == 200) {
-        Navigator.pop(dialogContext);
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: new Text(message),
-              actions: <Widget>[
-                TextButton(
-                  child: new Text("OK"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    emailController.clear();
-                    passwordController.clear();
-                    confPasswordController.clear();
-                  },
-                ),
-              ],
-            );
-          },
-        );
+        Navigator.pop(dialog.getDialogContext());
+        FocusScope.of(context).unfocus();
+        emailController.clear();
+        passwordController.clear();
+        confPasswordController.clear();
+        dialog.confirmation(context, message);
       } else {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: new Text(message),
-              actions: <Widget>[
-                TextButton(
-                  child: new Text("OK"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    emailController.clear();
-                    passwordController.clear();
-                    confPasswordController.clear();
-                  },
-                ),
-              ],
-            );
-          },
-        );
+        FocusScope.of(context).unfocus();
+        emailController.clear();
+        passwordController.clear();
+        confPasswordController.clear();
+        dialog.confirmation(context, message);
       }
     }
   }
@@ -174,6 +84,7 @@ class RegisterPageState extends State<RegisterPage>
     return Scaffold(body: _body());
   }
 
+  //body
   _body() {
     return Center(
         child: SingleChildScrollView(
@@ -184,6 +95,7 @@ class RegisterPageState extends State<RegisterPage>
     ])));
   }
 
+  //logo
   _logo() {
     return Container(
         width: 130,
@@ -199,6 +111,7 @@ class RegisterPageState extends State<RegisterPage>
             margin: EdgeInsets.all(20)));
   }
 
+  //form
   _form() {
     return Padding(
       padding: EdgeInsets.only(left: 22.0, right: 22.0),
@@ -215,6 +128,7 @@ class RegisterPageState extends State<RegisterPage>
     );
   }
 
+  //email textfield
   _emailTextField() {
     return TextFormField(
         controller: emailController,
@@ -232,6 +146,7 @@ class RegisterPageState extends State<RegisterPage>
         });
   }
 
+  //password textfield
   _passwordTextField() {
     return TextFormField(
         controller: passwordController,
@@ -253,6 +168,7 @@ class RegisterPageState extends State<RegisterPage>
         });
   }
 
+  //confirm password textfield
   _confirmPasswordTextField() {
     return TextFormField(
         controller: confPasswordController,
@@ -272,6 +188,7 @@ class RegisterPageState extends State<RegisterPage>
         });
   }
 
+  //register button
   _registerButton() {
     return Container(
         padding: EdgeInsets.all(20),
@@ -289,6 +206,7 @@ class RegisterPageState extends State<RegisterPage>
             )));
   }
 
+  //footer
   _footer() {
     return Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
       Text('Already have an account?',
@@ -311,260 +229,4 @@ class RegisterPageState extends State<RegisterPage>
       )
     ]);
   }
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   Size size = MediaQuery.of(context).size;
-  //   return Scaffold(
-  //       body: SingleChildScrollView(
-  //           reverse: true,
-  //           child: Column(
-  //             children: [
-  //               Align(
-  //                   alignment: Alignment.topCenter,
-  //                   child: Container(
-  //                       margin: EdgeInsets.only(top: 100),
-  //                       width: size.width / 4 + 30,
-  //                       height: size.height / 7 + 20,
-  //                       child: Card(
-  //                           semanticContainer: true,
-  //                           clipBehavior: Clip.antiAliasWithSaveLayer,
-  //                           child: Icon(Icons.person_add_alt,
-  //                               size: 50, color: Colors.blue),
-  //                           shape: RoundedRectangleBorder(
-  //                             borderRadius: BorderRadius.circular(50.0),
-  //                           ),
-  //                           elevation: 5,
-  //                           margin: EdgeInsets.all(20)))),
-  //               Align(
-  //                   alignment: Alignment.bottomCenter,
-  //                   child: Row(children: <Widget>[
-  //                     Text('Already have an account?',
-  //                         style: TextStyle(
-  //                           fontWeight: FontWeight.bold,
-  //                           fontSize: 20,
-  //                         )),
-  //                     SizedBox(width: 10),
-  //                     GestureDetector(
-  //                       onTap: () {
-  //                         Navigator.push(
-  //                             context,
-  //                             MaterialPageRoute(
-  //                                 builder: (context) => LoginPage()));
-  //                       },
-  //                       child: Text('Login',
-  //                           style: TextStyle(
-  //                               fontWeight: FontWeight.bold,
-  //                               fontSize: 20,
-  //                               decoration: TextDecoration.underline,
-  //                               color: Colors.blue)),
-  //                     )
-  //                   ]))
-  //             ],
-  //           )));
-  // }
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   Size size = MediaQuery.of(context).size;
-  //   return Scaffold(
-  //       resizeToAvoidBottomInset: false,
-  //       body: SingleChildScrollView(
-  //           child: Stack(
-  //         children: <Widget>[
-  //           Positioned.fill(
-  //               top: (size.height / 2) - 250,
-  //               child: Align(
-  //                   alignment: Alignment.topCenter,
-  //                   child: Container(
-  //                       width: size.width / 4 + 30,
-  //                       height: size.height / 7 + 20,
-  //                       child: Card(
-  //                           semanticContainer: true,
-  //                           clipBehavior: Clip.antiAliasWithSaveLayer,
-  //                           child: Icon(Icons.person_add_alt,
-  //                               size: 50, color: Colors.blue),
-  //                           shape: RoundedRectangleBorder(
-  //                             borderRadius: BorderRadius.circular(50.0),
-  //                           ),
-  //                           elevation: 5,
-  //                           margin: EdgeInsets.all(20))))),
-  //           Positioned.fill(
-  //               top: (size.height / 2) - 90,
-  //               child: Align(
-  //                   alignment: Alignment.bottomCenter,
-  //                   child: Container(
-  //                       margin: EdgeInsets.only(left: 20, right: 20),
-  //                       child: Form(
-  //                           key: _formKey,
-  //                           child: Column(children: <Widget>[
-  //                             TextFormField(
-  //                               controller: emailController,
-  //                               decoration: const InputDecoration(
-  //                                   labelText: 'Email',
-  //                                   hintText: 'Enter your email address'),
-  //                               validator: (value) {
-  //                                 if (value == null || value.isEmpty) {
-  //                                   return 'Please enter email address';
-  //                                 } else if (!RegExp(
-  //                                         r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-  //                                     .hasMatch(value)) {
-  //                                   return 'Invalid email address';
-  //                                 }
-  //                                 return null;
-  //                               },
-  //                             ),
-  //                             SizedBox(height: 25),
-  //                             TextFormField(
-  //                                 controller: passwordController,
-  //                                 obscureText: true,
-  //                                 enableSuggestions: false,
-  //                                 autocorrect: false,
-  //                                 decoration: const InputDecoration(
-  //                                     hintText: 'Enter your password',
-  //                                     labelText: 'Password'),
-  //                                 validator: (value) {
-  //                                   if (value == null || value.isEmpty) {
-  //                                     return 'Please enter password';
-  //                                   }
-  //                                   return null;
-  //                                 }),
-  //                             SizedBox(height: 25),
-  //                             TextFormField(
-  //                                 controller: confPasswordController,
-  //                                 obscureText: true,
-  //                                 enableSuggestions: false,
-  //                                 autocorrect: false,
-  //                                 decoration: const InputDecoration(
-  //                                     hintText: 'Enter your confirm password',
-  //                                     labelText: 'Confirm Password'),
-  //                                 validator: (value) {
-  //                                   if (value == null || value.isEmpty) {
-  //                                     return 'Please enter confirm password';
-  //                                   } else if (value != pass) {
-  //                                     return 'Passwords are not same';
-  //                                   }
-  //                                   return null;
-  //                                 }),
-  //                           ]))))),
-  //           Positioned.fill(
-  //               top: (size.height / 2) + 200,
-  //               child: Container(
-  //                   padding: EdgeInsets.all(20),
-  //                   child: Align(
-  //                       alignment: Alignment.topCenter,
-  //                       child: SizedBox(
-  //                           width: double.infinity,
-  //                           height: 45,
-  //                           child: ElevatedButton(
-  //                             onPressed: () {
-  //                               if (_formKey.currentState!.validate()) {}
-  //                             },
-  //                             child: const Text('Register',
-  //                                 style: TextStyle(
-  //                                     fontWeight: FontWeight.bold,
-  //                                     fontSize: 20)),
-  //                           ))))),
-  //           Positioned.fill(
-  //               bottom: 20,
-  //               child: Align(
-  //                   alignment: Alignment.bottomCenter,
-  //                   child: Row(
-  //                     children: <Widget>[
-  //                       Text('Already have an account?',
-  //                           style: TextStyle(
-  //                             fontWeight: FontWeight.bold,
-  //                             fontSize: 20,
-  //                           )),
-  //                       SizedBox(width: 10),
-  //                       GestureDetector(
-  //                         onTap: () {
-  //                           Navigator.push(
-  //                               context,
-  //                               MaterialPageRoute(
-  //                                   builder: (context) => LoginPage()));
-  //                         },
-  //                         child: Text('Login',
-  //                             style: TextStyle(
-  //                                 fontWeight: FontWeight.bold,
-  //                                 fontSize: 20,
-  //                                 decoration: TextDecoration.underline,
-  //                                 color: Colors.blue)),
-  //                       ),
-  //                     ],
-  //                   )))
-  //         ],
-  //       ))
-  //       // body: new Form(
-  //       //     key: _formKey,
-  //       //     child: Column(
-  //       //       mainAxisAlignment: MainAxisAlignment.center,
-  //       //       children: <Widget>[
-  //       //         Text("Registration", style: TextStyle(color: Colors.blue)),
-  //       //         TextFormField(
-  //       //             controller: emailController,
-  //       //             decoration: const InputDecoration(
-  //       //                 hintText: 'Enter your email address',
-  //       //                 labelText: 'Email'),
-  //       //             validator: (value) {
-  //       //               if (value == null || value.isEmpty) {
-  //       //                 return 'Please enter email address';
-  //       //               } else if (!RegExp(
-  //       //                       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-  //       //                   .hasMatch(value)) {
-  //       //                 return 'Invalid email address';
-  //       //               }
-  //       //               return null;
-  //       //             }),
-  //       //         SizedBox(height: 10),
-  //       //         TextFormField(
-  //       //             controller: passwordController,
-  //       //             obscureText: true,
-  //       //             enableSuggestions: false,
-  //       //             autocorrect: false,
-  //       //             decoration: const InputDecoration(
-  //       //                 hintText: 'Enter your password', labelText: 'Password'),
-  //       //             validator: (value) {
-  //       //               if (value == null || value.isEmpty) {
-  //       //                 return 'Please enter password';
-  //       //               } else {
-  //       //                 pass = value;
-  //       //               }
-  //       //               return null;
-  //       //             }),
-  //       //         SizedBox(height: 10),
-  //       //         TextFormField(
-  //       //             controller: confPasswordController,
-  //       //             obscureText: true,
-  //       //             enableSuggestions: false,
-  //       //             autocorrect: false,
-  //       //             decoration: const InputDecoration(
-  //       //                 hintText: 'Enter your confirm password',
-  //       //                 labelText: 'Confirm Password'),
-  //       //             validator: (value) {
-  //       //               if (value == null || value.isEmpty) {
-  //       //                 return 'Please enter confirm password';
-  //       //               } else if (value != pass) {
-  //       //                 return 'Passwords are not same';
-  //       //               }
-  //       //               return null;
-  //       //             }),
-  //       //         ElevatedButton(
-  //       //           onPressed: () {
-  //       //             if (_formKey.currentState!.validate()) {
-  //       //               String randomString = getRandomString(15);
-  //       //               sendData(randomString);
-  //       //             }
-  //       //           },
-  //       //           child: const Text('Register'),
-  //       //         ),
-  //       //         Visibility(
-  //       //             visible: visible,
-  //       //             child: Container(
-  //       //                 margin: EdgeInsets.only(bottom: 30),
-  //       //                 child: CircularProgressIndicator())),
-  //       //       ],
-  //       //     ))
-  //       );
-  // }
 }
