@@ -1,13 +1,11 @@
+import 'package:intl/intl.dart';
+
 class MyContact {
   String? name;
   String? phone;
-  String? checkInDate;
+  DateTime? checkInDate;
 
-  MyContact(String name, String phone, String checkInDate) {
-    this.name = name;
-    this.phone = phone;
-    this.checkInDate = checkInDate;
-  }
+  MyContact({this.name, this.phone, this.checkInDate});
 
   String? getName() {
     return name;
@@ -17,7 +15,16 @@ class MyContact {
     return phone;
   }
 
-  String? getCheckInDate() {
+  DateTime? getCheckInDate() {
     return checkInDate;
+  }
+
+  factory MyContact.fromJson(Map<String, dynamic> json) {
+    DateFormat format = DateFormat("yyyy-MM-dd HH:mm:ss");
+    return MyContact(
+      name: json['user'] as String,
+      phone: json['phone'] as String,
+      checkInDate: format.parse(json['checkIn']),
+    );
   }
 }

@@ -68,12 +68,13 @@ class RegisterPageState extends State<RegisterPage> {
         emailController.clear();
         passwordController.clear();
         confPasswordController.clear();
-        dialog.confirmation(context, message);
+        dialog.registerConfirmation(context, message);
       } else {
         FocusScope.of(context).unfocus();
         emailController.clear();
         passwordController.clear();
         confPasswordController.clear();
+        await _auth.signOut();
         dialog.confirmation(context, message);
       }
     }

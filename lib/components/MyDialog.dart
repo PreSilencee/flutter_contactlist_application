@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contactlist_application/services/wrapper.dart';
 
 class MyDialog {
   late BuildContext dialogContext;
@@ -21,6 +22,27 @@ class MyDialog {
                       SizedBox(width: 20),
                       loadingMessage(title)
                     ])),
+          );
+        });
+  }
+
+  registerConfirmation(BuildContext context, String title) {
+    return showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: new Text(title),
+            actions: <Widget>[
+              TextButton(
+                child: new Text("OK"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushReplacement(
+                      context, MaterialPageRoute(builder: (_) => Wrapper()));
+                },
+              ),
+            ],
           );
         });
   }
