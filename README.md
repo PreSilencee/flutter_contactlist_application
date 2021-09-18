@@ -17,5 +17,6 @@
 
 # Additional Feature
 - [X] Login & Register
+- [X] Logout
 
 
