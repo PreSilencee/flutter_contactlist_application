@@ -2,18 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_contactlist_application/models/MyContact.dart';
 import 'package:flutter_contactlist_application/services/auth.dart';
-import 'package:flutter_contactlist_application/screens/login.dart';
 import 'package:flutter_contactlist_application/components/MyDialog.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:timeago/timeago.dart' as timeago;
-import 'package:time_span/time_span.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share/share.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -22,7 +19,7 @@ class HomePage extends StatefulWidget {
 
 class HomePageState extends State<HomePage> {
   DateFormat dateTimeFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
-  List myList = List.generate(4, (index) => "Item: ${index + 1}");
+  late Future<List<MyContact>> _mycontact;
   ScrollController _scrollController = ScrollController();
   bool loadingVisible = false;
   bool endIndicatorVisible = false;
@@ -31,39 +28,88 @@ class HomePageState extends State<HomePage> {
   int snapLength = 0;
   int counter = 0;
   List<bool> isSelected = [true, false];
-  bool originalTimeVisible = true;
-  bool timeAgoVisible = false;
   List<String> timeAgoList = [];
+  List<Color> colorList = [
+    Colors.pink,
+    Colors.red,
+    Colors.deepOrange,
+    Colors.orange,
+    Colors.green,
+    Colors.cyan,
+    Colors.blue,
+    Colors.purple
+  ];
 
   @override
   void initState() {
     super.initState();
-
+    _mycontact = _getContactList();
+    getViewState();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
               _scrollController.position.maxScrollExtent &&
           _scrollController.position.userScrollDirection ==
               ScrollDirection.reverse) {
+        counter++;
         _getMoreData();
       }
     });
   }
 
-  _sendContactData() {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(appBar: _appBar(), body: _body());
+  }
+
+  saveViewState() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      prefs.setStringList(
+        "isSelected",
+        isSelected.map((e) => e ? 'true' : 'false').toList(),
+      );
+    });
+  }
+
+  getViewState() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isSelected = (prefs
+              .getStringList('isSelected')
+              ?.map((e) => e == 'true' ? true : false)
+              .toList() ??
+          [true, false]);
+    });
+  }
+
+  _sendContactData() async {
     List<MyContact> _newContact = [];
 
     for (int i = 0; i < 5; i++) {
-      MyContact _contactObject = new MyContact(
+      MyContact _contactObject = MyContact(
           name: _getRandomName(),
           phone: _getRandomPhone(),
           checkInDate: _getRandomDateTime());
       _newContact.add(_contactObject);
     }
 
-    for (int i = 0; i < _newContact.length; i++) {
-      print(_newContact[i].getName());
-      print(_newContact[i].getPhone());
-      print(_newContact[i].getCheckInDate());
+    String data = jsonEncode(_newContact.map((e) => e.toJson()).toList());
+
+    var url = 'https://rlcm.000webhostapp.com/insertContact.php';
+
+    // Starting Web Call with data.
+    var response = await http.post(Uri.parse(url), body: data);
+
+    // Getting Server response into variable.
+    var message = await json.decode(response.body);
+
+    if (response.statusCode == 200) {
+      print(message);
+      setState(() {
+        _mycontact = _getContactList();
+      });
+    } else {
+      print(message);
     }
   }
 
@@ -108,10 +154,9 @@ class HomePageState extends State<HomePage> {
     return name[index];
   }
 
-  DateTime _getRandomDateTime() {
+  String _getRandomDateTime() {
     String randomDateTime = _getRandomDate() + " " + _getRandomTime();
-    DateFormat dateTimeFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
-    return dateTimeFormat.parse(randomDateTime);
+    return randomDateTime;
   }
 
   String _getRandomDate() {
@@ -169,6 +214,7 @@ class HomePageState extends State<HomePage> {
 
   Future<List<MyContact>> _getContactList() async {
     List<MyContact> _contact = [];
+    List<String> _timeAgo = [];
     var url = 'https://rlcm.000webhostapp.com/getData.php';
 
     final response = await http.get(Uri.parse(url));
@@ -178,36 +224,36 @@ class HomePageState extends State<HomePage> {
       _contact = await list
           .map<MyContact>((json) => MyContact.fromJson(json))
           .toList();
-
-      if (counter == 0) {
-        snapLength = _contact.length;
-        half = (snapLength / 2).round();
-        totalLength = snapLength < half ? snapLength : half;
-        counter++;
-      } else {
-        snapLength = _contact.length;
-      }
+      snapLength = _contact.length;
+      half = (_contact.length / 2).round();
+      totalLength = _contact.length < half ? _contact.length : half;
 
       for (int i = 0; i < snapLength; i++) {
-        DateTime? dataDateTime = _contact[i].getCheckInDate();
+        String dataDateTimeString;
 
-        if (dataDateTime != null) {
-          Duration diff = DateTime.now().difference(dataDateTime);
-          String message = '';
-          if (diff.inDays >= 1) {
-            message = '${diff.inDays} day(s) ago';
-          } else if (diff.inHours >= 1) {
-            message = '${diff.inHours} hour(s) ago';
-          } else if (diff.inMinutes >= 1) {
-            message = '${diff.inMinutes} minute(s) ago';
-          } else if (diff.inSeconds >= 1) {
-            message = '${diff.inSeconds} second(s) ago';
-          } else {
-            message = 'just now';
-          }
-          timeAgoList.add(message);
+        dataDateTimeString = _contact[i].getCheckInDate()!;
+
+        DateTime dataDateTime = dateTimeFormat.parse(dataDateTimeString);
+
+        Duration diff = DateTime.now().difference(dataDateTime);
+        String message = '';
+        if (diff.inDays >= 1) {
+          message = '${diff.inDays} day(s) ago';
+        } else if (diff.inHours >= 1) {
+          message = '${diff.inHours} hour(s) ago';
+        } else if (diff.inMinutes >= 1) {
+          message = '${diff.inMinutes} minute(s) ago';
+        } else if (diff.inSeconds >= 1) {
+          message = '${diff.inSeconds} second(s) ago';
+        } else {
+          message = 'just now';
         }
+        _timeAgo.add(message);
       }
+
+      setState(() {
+        timeAgoList = _timeAgo;
+      });
 
       return _contact;
     }
@@ -253,12 +299,6 @@ class HomePageState extends State<HomePage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    return Scaffold(appBar: _appBar(), body: _body());
-  }
-
   _appBar() {
     return AppBar(
       title: Text('Contact List'),
@@ -296,20 +336,52 @@ class HomePageState extends State<HomePage> {
       onPressed: (int index) {
         setState(() {
           for (int i = 0; i < isSelected.length; i++) {
-            isSelected[i] = i == index;
+            if (i == index) {
+              isSelected[i] = true;
+            } else {
+              isSelected[i] = false;
+            }
           }
-
-          if (index == 0) {
-            originalTimeVisible = true;
-            timeAgoVisible = false;
-          } else {
-            originalTimeVisible = false;
-            timeAgoVisible = true;
-          }
+          saveViewState();
         });
       },
       isSelected: isSelected,
     );
+  }
+
+  int getRandomColor() {
+    var randomTest = new Random();
+    int colorLength = colorList.length;
+    int randomIndex = 0 + randomTest.nextInt(colorLength - 0);
+
+    return randomIndex;
+  }
+
+  _userLogo() {
+    return Icon(Icons.account_circle_sharp,
+        size: 60, color: colorList[getRandomColor()]);
+  }
+
+  _dataField(String string) {
+    return Padding(
+      padding: EdgeInsets.all(5),
+      child: Align(alignment: Alignment.centerLeft, child: Text(string)),
+    );
+  }
+
+  _listTileAction(String name, String phone, String dateTime, String timeAgo) {
+    return IconButton(
+      icon: const Icon(Icons.share),
+      tooltip: 'Share Information',
+      onPressed: () {
+        _onShareData(name, phone, dateTime, timeAgo);
+      },
+    );
+  }
+
+  _onShareData(
+      String name, String phone, String dateTime, String timeago) async {
+    Share.share(name + "\n" + phone + "\n" + dateTime + "\n" + timeago);
   }
 
   _body() {
@@ -329,47 +401,55 @@ class HomePageState extends State<HomePage> {
                 child: RefreshIndicator(
                     onRefresh: () {
                       _sendContactData();
-                      return Future.delayed(Duration(seconds: 1), () {
+                      MyDialog dialog = new MyDialog();
+                      dialog.waiting(context, 'Generate 5 random Data');
+                      return Future.delayed(Duration(seconds: 2), () {
+                        Navigator.pop(dialog.getDialogContext());
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: const Text('Page Refreshed'),
+                          content: const Text('Added 5 Random Record'),
                         ));
                       });
                     },
                     child: FutureBuilder(
                         initialData: [],
-                        future: _getContactList(),
+                        future: _mycontact,
                         builder: (context, AsyncSnapshot snapshot) {
-                          if (snapshot.data.length > 0) {
-                            return ListView.builder(
-                                physics: const BouncingScrollPhysics(
-                                    parent:
-                                        const AlwaysScrollableScrollPhysics()),
-                                controller: _scrollController,
-                                itemCount: totalLength,
-                                itemBuilder: (context, index) {
-                                  return Card(
-                                      child: ListTile(
-                                          title: Text(
-                                              snapshot.data[index].getName()),
-                                          subtitle: Column(children: [
-                                            Text(snapshot.data[index]
-                                                .getPhone()),
-                                            Visibility(
-                                                visible: originalTimeVisible,
-                                                child: Text(dateTimeFormat
-                                                    .format(snapshot.data[index]
-                                                        .getCheckInDate()))),
-                                            Visibility(
-                                                visible: timeAgoVisible,
-                                                child: Text(timeAgoList[index]))
-                                          ])));
-                                });
-                          } else {
-                            print("I am here");
-                            return Center(
-                              child: Text("No Data found"),
-                            );
-                          }
+                          if (snapshot.hasError) print(snapshot.error);
+                          return snapshot.hasData
+                              ? ListView.builder(
+                                  physics: const BouncingScrollPhysics(
+                                      parent:
+                                          const AlwaysScrollableScrollPhysics()),
+                                  controller: _scrollController,
+                                  itemCount: totalLength,
+                                  itemBuilder: (context, index) {
+                                    return Card(
+                                        child: ListTile(
+                                            leading: _userLogo(),
+                                            trailing: _listTileAction(
+                                                snapshot.data[index].getName(),
+                                                snapshot.data[index].getPhone(),
+                                                snapshot.data[index]
+                                                    .getCheckInDate(),
+                                                timeAgoList[index]),
+                                            title: Text(
+                                                snapshot.data[index].getName(),
+                                                style: TextStyle(fontSize: 20)),
+                                            subtitle: Column(children: [
+                                              _dataField(snapshot.data[index]
+                                                  .getPhone()),
+                                              Visibility(
+                                                  visible: isSelected[0],
+                                                  child: _dataField(snapshot
+                                                      .data[index]
+                                                      .getCheckInDate())),
+                                              Visibility(
+                                                  visible: isSelected[1],
+                                                  child: _dataField(
+                                                      timeAgoList[index]))
+                                            ])));
+                                  })
+                              : Center(child: CircularProgressIndicator());
                         })))),
         Positioned.fill(
             bottom: 20,
@@ -390,123 +470,4 @@ class HomePageState extends State<HomePage> {
       ],
     );
   }
-  // _body() {
-  //   return Stack(
-  //     children: [
-  //       Positioned.fill(
-  //           bottom: 70,
-  //           child: FutureBuilder(
-  //               initialData: [],
-  //               future: _getContactList(),
-  //               builder: (BuildContext context, AsyncSnapshot snapshot) {
-  //                 if (snapshot.hasData) {
-  //                   return new RefreshIndicator(
-  //                       onRefresh: () {
-  //                         return Future.delayed(Duration(seconds: 1), () {
-  //                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-  //                             content: const Text('Page Refreshed'),
-  //                           ));
-  //                         });
-  //                       },
-  //                       child: ListView.builder(
-  //                           controller: _scrollController,
-  //                           itemCount: snapshot.data.length,
-  //                           itemBuilder: (context, index) {
-  //                             return Card(
-  //                                 semanticContainer: true,
-  //                                 clipBehavior: Clip.antiAliasWithSaveLayer,
-  //                                 elevation: 5,
-  //                                 margin: EdgeInsets.all(10),
-  //                                 child: Column(
-  //                                   children: [
-  //                                     _data('Name: ',
-  //                                         snapshot.data[index].getName()),
-  //                                     _data('Phone: ',
-  //                                         snapshot.data[index].getPhone()),
-  //                                     _data(
-  //                                         'Check In: ',
-  //                                         snapshot.data[index]
-  //                                             .getCheckInDate()),
-  //                                   ],
-  //                                 )
-  //                                 // child: ListTile(title: _data('Name: ', 'Name'))
-  //                                 );
-  //                           }));
-  //                 } else {
-  //                   return Container();
-  //                 }
-  //               })),
-  //       Positioned.fill(
-  //           bottom: 20,
-  //           child: Align(
-  //               alignment: Alignment.bottomCenter,
-  //               child: Visibility(
-  //                   visible: endIndicatorVisible,
-  //                   child: Text('You have reached end of the list')))),
-  //       Positioned.fill(
-  //           bottom: 20,
-  //           child: Align(
-  //               alignment: Alignment.bottomCenter,
-  //               child: Visibility(
-  //                   visible: loadingVisible,
-  //                   child: CircularProgressIndicator(
-  //                       valueColor:
-  //                           AlwaysStoppedAnimation<Color>(Colors.blue))))),
-  //     ],
-  //   );
-  // }
-
-  // _body() {
-  //   return RefreshIndicator(
-  //       onRefresh: () {
-  //         return Future.delayed(Duration(seconds: 1), () {
-  //           setState(() {
-  //             _demoData.addAll(["Ionic", "Xamarin"]);
-  //           });
-  //           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-  //             content: const Text('Page Refreshed'),
-  //           ));
-  //         });
-  //       },
-  //       child: ListView.builder(
-  //           controller: _scrollController,
-  //           itemCount: myList.length < 15 ? myList.length : 15,
-  //           itemBuilder: (context, index) {
-  //             return Card(child: ListTile(title: Text(myList[index])));
-  //           }));
-  // }
-}
-
-// _dataContainer() {
-//   return Container(
-//       width: double.infinity,
-//       height: 100,
-//       child: Card(
-//         semanticContainer: true,
-//         clipBehavior: Clip.antiAliasWithSaveLayer,
-//         child: Column(
-//           children: [
-//             _data('Name: ', 'Name'),
-//             _data('Phone: ', 'Phone'),
-//             _data('Check in: ', 'Check in')
-//           ],
-//         ),
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(10.0),
-//         ),
-//         elevation: 5,
-//         margin: EdgeInsets.all(10),
-//       ));
-// }
-
-_data(String title, String? data) {
-  return Padding(
-    padding: EdgeInsets.all(5),
-    child: Align(
-      alignment: Alignment.centerLeft,
-      child: Row(
-        children: [Text(title), SizedBox(width: 5), Text(data!)],
-      ),
-    ),
-  );
 }

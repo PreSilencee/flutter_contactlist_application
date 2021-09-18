@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contactlist_application/components/MyDialog.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_contactlist_application/screens/login.dart';
 import 'package:flutter_contactlist_application/services/auth.dart';
@@ -12,12 +10,6 @@ class RegisterPage extends StatefulWidget {
   @override
   RegisterPageState createState() => RegisterPageState();
 }
-
-const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
-Random _rnd = Random();
-
-String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
-    length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
 
 //register page state
 class RegisterPageState extends State<RegisterPage> {
